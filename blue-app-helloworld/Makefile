@@ -20,6 +20,8 @@ $(error BOLOS_SDK is not set)
 endif
 include $(BOLOS_SDK)/Makefile.defines
 
+$(info --- begin)
+
 # Main app configuration
 
 APPNAME = "Hello World"
@@ -56,6 +58,10 @@ endif
 ifeq ($(GCCPATH),)
 $(info GCCPATH is not set: arm-none-eabi-* will be used from PATH)
 endif
+
+$(info --- BOLOS_ENV $(BOLOS_ENV))
+$(info --- CLANGPATH $(CLANGPATH))
+$(info --- GCCPATH $(GCCPATH))
 
 CC := $(CLANGPATH)clang
 CFLAGS += -O3 -Os

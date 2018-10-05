@@ -15,10 +15,10 @@
 *  limitations under the License.
 ********************************************************************************/
 
-#include "os.h"
-#include "cx.h"
+#include "../../nanos-secure-sdk/include/os.h"
+#include "../../nanos-secure-sdk/include/cx.h"
 
-#include "os_io_seproxyhal.h"
+#include "../../nanos-secure-sdk/include/os_io_seproxyhal.h"
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
@@ -125,7 +125,7 @@ static const bagl_element_t bagl_ui_sample_nanos[] = {
     {
         {BAGL_LABELINE, 0x01, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
          BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
-        "Hello World",
+        "Hello Anton & Dima :)",
         0,
         0,
         0,
