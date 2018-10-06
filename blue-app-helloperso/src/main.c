@@ -23,8 +23,8 @@
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
 static const bagl_element_t *io_seproxyhal_touch_exit(const bagl_element_t *e);
-static const bagl_element_t *io_seproxyhal_touch_next(const bagl_element_t *e);
-static const bagl_element_t *io_seproxyhal_touch_back(const bagl_element_t *e);
+static const bagl_element_t *io_seproxyhal_touch_right(const bagl_element_t *e);
+static const bagl_element_t *io_seproxyhal_touch_left(const bagl_element_t *e);
 static void ui_idle(void);
 //static void setText(const char* top, const char* mid, const char* bot);
 
@@ -43,9 +43,12 @@ static const char NOT_AVAILABLE[] = "NOT_AVAILABLE";
 // static const char bb1[] = "Welcome. bb1"; // 12
 // static const char cc1[] = "This is the bottom ccc1-";
 
+static bool game_started;
+static bool game_ower;
+
 // Welcome
 static const char welcomeTop[] = "Welcome to ";
-static const char welcomeMid[] = "True/False";
+static const char welcomeMid[] = "\"True or False\"";
 static const char welcomeBot[] = "Game";
 
 // Score
@@ -53,13 +56,20 @@ static const char welcomeBot[] = "Game";
 // static const char scoreMid[] = "";
 // static const char scoreBot[] = "55";
 
+// Lost
+static const char lostTop[] = "Incorrect answer :(";
+static const char lostMid[] = "Your Score:";
+static const char lostBot[] = "55";
+
 static const char quest[][30] = {
-    "a1", "a2", "a3", 
-    "b1", "b2", "b3",
-    "cc1", "cc2", "cc3",
-    "dd1", "dd2", "dd3",
-    "ee1", "ee2", "ee3"           
+    "Antibiotics kill viruses", "as well as", "bacteria.", 
+    "We see the Sun", "where it was", "8 mins, 20 secs ago",
+    "The capital of", "Australia", "is Sydney",
+    "World's highest waterfall", "is Angel Falls","in Venezuela",
+    "World's deepest lake is", "Lake Baikal", "in Russia"
 };
+
+static bool answers[] = { false, true, false, true, true };
 
 // ********************************************************************************
 // Ledger Blue specific UI
@@ -169,11 +179,11 @@ bagl_ui_sample_nanos_button(unsigned int button_mask,
                             unsigned int button_mask_counter) {
     switch (button_mask) {
     case BUTTON_EVT_RELEASED | BUTTON_LEFT:
-        io_seproxyhal_touch_back(NULL);
+        io_seproxyhal_touch_left(NULL);
         break;
 
     case BUTTON_EVT_RELEASED | BUTTON_RIGHT:
-        io_seproxyhal_touch_next(NULL);
+        io_seproxyhal_touch_right(NULL);
         break;
 
     case BUTTON_EVT_RELEASED | BUTTON_LEFT | BUTTON_RIGHT: // EXIT
@@ -187,31 +197,77 @@ bagl_ui_sample_nanos_button(unsigned int button_mask,
 
 static const bagl_element_t *io_seproxyhal_touch_exit(const bagl_element_t *e) {
     // Go back to the dashboard
+
+    // todo: move to score
+    // os_memmove(top, scoreTop, sizeof(scoreTop));    
+    // os_memmove(mid, scoreMid, sizeof(scoreMid));    
+    // os_memmove(bot, scoreBot, sizeof(scoreBot)); 
     os_sched_exit(0);
     return NULL;
 }
 
-static const bagl_element_t *io_seproxyhal_touch_next(const bagl_element_t *e) {   
-    int hh = path[4];
-    os_memmove(top, quest[hh], sizeof(quest[hh]));    
-    os_memmove(mid, quest[hh+1], sizeof(quest[hh+1]));  
-    os_memmove(bot, quest[hh+2], sizeof(quest[hh+2])); 
-    path[4] += 3;
+static const bagl_element_t *io_seproxyhal_touch_right(const bagl_element_t *e) {   
+    if(game_ower) {
+        os_sched_exit(0);        
+        return NULL;
+    }
 
-    // os_memmove(top, quest[qlevel], sizeof(quest[qlevel]));    
-    // os_memmove(mid, quest[qlevel+1], sizeof(quest[qlevel+1]));  
-    // os_memmove(bot, quest[qlevel+2], sizeof(quest[qlevel+2]));      
-    //qlevel += 3;
+    if(!game_started){
+        game_started = true;
+        os_memmove(top, quest[0], sizeof(quest[0]));    
+        os_memmove(mid, quest[1], sizeof(quest[1]));  
+        os_memmove(bot, quest[2], sizeof(quest[2])); 
+        path[4] += 3;        
+        return NULL;
+    }
+
+    const int hh = path[4];    
+    if(answers[hh/3 - 1]) {
+        os_memmove(top, quest[hh], sizeof(quest[hh]));    
+        os_memmove(mid, quest[hh+1], sizeof(quest[hh+1]));  
+        os_memmove(bot, quest[hh+2], sizeof(quest[hh+2])); 
+        path[4] += 3;        
+    }
+    else {
+        game_ower = true;        
+        os_memmove(top, lostTop, sizeof(lostTop));    
+        os_memmove(mid, lostMid, sizeof(lostMid));    
+        os_memmove(bot, lostBot, sizeof(lostBot)); 
+    }
+
     ui_idle();
-    
     return NULL;
 }
 
-static const bagl_element_t *io_seproxyhal_touch_back(const bagl_element_t *e) {
-    // todo: move to score
-    // os_memmove(top, scoreTop, sizeof(scoreTop));    
-    // os_memmove(mid, scoreMid, sizeof(scoreMid));    
-    // os_memmove(bot, scoreBot, sizeof(scoreBot));          
+static const bagl_element_t *io_seproxyhal_touch_left(const bagl_element_t *e) {
+    if(game_ower) {
+        os_sched_exit(0);        
+        return NULL;
+    }
+
+    if(!game_started){
+        game_started = 1;
+        os_memmove(top, quest[0], sizeof(quest[0]));    
+        os_memmove(mid, quest[1], sizeof(quest[1]));  
+        os_memmove(bot, quest[2], sizeof(quest[2])); 
+        path[4] += 3;        
+        return NULL;
+    }
+
+    const int hh = path[4];
+    if(!answers[hh/3 - 1]) {
+        os_memmove(top, quest[hh], sizeof(quest[hh]));    
+        os_memmove(mid, quest[hh+1], sizeof(quest[hh+1]));  
+        os_memmove(bot, quest[hh+2], sizeof(quest[hh+2])); 
+        path[4] += 3;        
+    }
+    else {
+        game_ower = true;
+        os_memmove(top, lostTop, sizeof(lostTop));    
+        os_memmove(mid, lostMid, sizeof(lostMid));    
+        os_memmove(bot, lostBot, sizeof(lostBot));        
+    }
+         
     ui_idle();    
     return NULL;
 }
@@ -470,6 +526,9 @@ __attribute__((section(".boot"))) int main(void) {
             path[4] = 0;
 
             //derive();
+            game_started = false;
+            game_ower = false;
+
             os_memmove(address, NOT_AVAILABLE, sizeof(NOT_AVAILABLE));
             os_memmove(top, welcomeTop, sizeof(welcomeTop));
             os_memmove(mid, welcomeMid, sizeof(welcomeMid));
