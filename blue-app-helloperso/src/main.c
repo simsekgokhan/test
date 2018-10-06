@@ -25,15 +25,28 @@ unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
 static const bagl_element_t *io_seproxyhal_touch_exit(const bagl_element_t *e);
 static const bagl_element_t *io_seproxyhal_touch_next(const bagl_element_t *e);
+static const bagl_element_t *io_seproxyhal_touch_back(const bagl_element_t *e);
 static const bagl_element_t *io_seproxyhal_touch_auth(const bagl_element_t *e);
 static bool derive(void);
 static void ui_idle(void);
 
 static char address[100];
+static char top[100];
+static char mid[100];
+static char bot[100];
+
 static unsigned int path[5];
 ux_state_t ux;
 
 static const char NOT_AVAILABLE[] = "Not available";
+
+static int level = 0;
+static const char aa1[] = "Welcome. You are in aa1.";
+static const char aa2[] = "Welcome. You are in aa2";
+static const char bb1[] = "Welcome. bb1";
+static const char bb2[] = "Welcome. bb2";
+static const char cc1[] = "This is the bottom ccc1-";
+static const char cc2[] = "This is the bottom ccc2-";
 
 // ********************************************************************************
 // Ledger Blue specific UI
@@ -41,99 +54,7 @@ static const char NOT_AVAILABLE[] = "Not available";
 
 #ifdef TARGET_BLUE
 
-static const bagl_element_t const bagl_ui_sample_blue[] = {
-    // {
-    //     {type, userid, x, y, width, height, stroke, radius, fill, fgcolor,
-    //      bgcolor, font_id, icon_id},
-    //     text,
-    //     touch_area_brim,
-    //     overfgcolor,
-    //     overbgcolor,
-    //     tap,
-    //     out,
-    //     over,
-    // },
-    {
-        {BAGL_RECTANGLE, 0x00, 0, 60, 320, 420, 0, 0, BAGL_FILL, 0xf9f9f9,
-         0xf9f9f9, 0, 0},
-        NULL,
-        0,
-        0,
-        0,
-        NULL,
-        NULL,
-        NULL,
-    },
-    {
-        {BAGL_RECTANGLE, 0x00, 0, 0, 320, 60, 0, 0, BAGL_FILL, 0x1d2028,
-         0x1d2028, 0, 0},
-        NULL,
-        0,
-        0,
-        0,
-        NULL,
-        NULL,
-        NULL,
-    },
-    {
-        {BAGL_LABEL, 0x00, 20, 0, 320, 60, 0, 0, BAGL_FILL, 0xFFFFFF, 0x1d2028,
-         BAGL_FONT_OPEN_SANS_LIGHT_14px | BAGL_FONT_ALIGNMENT_MIDDLE, 0},
-        "Hello Perso",
-        0,
-        0,
-        0,
-        NULL,
-        NULL,
-        NULL,
-    },
-    {
-        {BAGL_LABEL, 0x00, 20, 100, 320, 60, 0, 0, 0, 0, 0xF9F9F9F9,
-         BAGL_FONT_OPEN_SANS_LIGHT_16px | BAGL_FONT_ALIGNMENT_CENTER, 0},
-        address,
-        0,
-        0,
-        0,
-        NULL,
-        NULL,
-        NULL,
-    },
-    {
-        {BAGL_BUTTON | BAGL_FLAG_TOUCHABLE, 0x00, 165, 225, 120, 40, 0, 6,
-         BAGL_FILL, 0x41ccb4, 0xF9F9F9, BAGL_FONT_OPEN_SANS_LIGHT_14px |
-         BAGL_FONT_ALIGNMENT_CENTER | BAGL_FONT_ALIGNMENT_MIDDLE, 0},
-        "EXIT",
-        0,
-        0x37ae99,
-        0xF9F9F9,
-        io_seproxyhal_touch_exit,
-        NULL,
-        NULL,
-    },
-    {
-        {BAGL_BUTTON | BAGL_FLAG_TOUCHABLE, 0x00, 165, 280, 120, 40, 0, 6,
-         BAGL_FILL, 0x41ccb4, 0xF9F9F9, BAGL_FONT_OPEN_SANS_LIGHT_14px |
-         BAGL_FONT_ALIGNMENT_CENTER | BAGL_FONT_ALIGNMENT_MIDDLE, 0},
-        "NEXT",
-        0,
-        0x37ae99,
-        0xF9F9F9,
-        io_seproxyhal_touch_next,
-        NULL,
-        NULL,
-    },
-    {
-        {BAGL_BUTTON | BAGL_FLAG_TOUCHABLE, 0x00, 165, 335, 120, 40, 0, 6,
-         BAGL_FILL, 0x41ccb4, 0xF9F9F9, BAGL_FONT_OPEN_SANS_LIGHT_14px |
-         BAGL_FONT_ALIGNMENT_CENTER | BAGL_FONT_ALIGNMENT_MIDDLE, 0},
-        "AUTH",
-        0,
-        0x37ae99,
-        0xF9F9F9,
-        io_seproxyhal_touch_auth,
-        NULL,
-        NULL,
-    },
-};
+static const bagl_element_t const bagl_ui_sample_blue[] = {};
 
 static unsigned int
 bagl_ui_sample_blue_button(unsigned int button_mask,
@@ -173,9 +94,9 @@ static const bagl_element_t bagl_ui_sample_nanos[] = {
         NULL,
     },
     {
-        {BAGL_LABELINE, 0x02, 0, 12, 128, 11, 0, 0, 0, 0xFFFFFF, 0x000000,
-         BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
-        "Address",
+        {BAGL_LABELINE, 0x02, 0, 10, 128, 11, 0, 0, 0, 0xFFFFFF, 0x000000,
+         BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_LEFT, 0},
+        top,
         0,
         0,
         0,
@@ -183,11 +104,11 @@ static const bagl_element_t bagl_ui_sample_nanos[] = {
         NULL,
         NULL,
     },
-    {
-        {BAGL_LABELINE, 0x02, 23, 26, 82, 11, 0x80 | 10, 0, 0, 0xFFFFFF,
-         0x000000, BAGL_FONT_OPEN_SANS_EXTRABOLD_11px |
+    {   // type, 	  userid,  x,  y, width, height, stroke, radius, fill, fgcolor
+        {BAGL_LABELINE, 0x02, 23, 20, 82, 11, 0x80 | 10, 0, 0, 0xFFFFFF,
+         0x000000, BAGL_FONT_OPEN_SANS_REGULAR_11px |
          BAGL_FONT_ALIGNMENT_CENTER, 26},
-        address,
+        mid,
         0,
         0,
         0,
@@ -195,6 +116,17 @@ static const bagl_element_t bagl_ui_sample_nanos[] = {
         NULL,
         NULL,
     },
+    {   // type, 	  userid, x,  y, width, height, stroke, radius, fill, fgcolor
+        {BAGL_LABELINE, 0x02, 0, 30, 128, 11, 0, 0, 0, 0xFFFFFF, 0x000000,
+         BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_LEFT, 0},
+        bot,
+        0,
+        0,
+        0,
+        NULL,
+        NULL,
+        NULL,
+    },    
     {
         {BAGL_ICON, 0x00, 3, 12, 7, 7, 0, 0, 0, 0xFFFFFF, 0x000000, 0,
          BAGL_GLYPH_ICON_CROSS},
@@ -235,7 +167,7 @@ bagl_ui_sample_nanos_button(unsigned int button_mask,
                             unsigned int button_mask_counter) {
     switch (button_mask) {
     case BUTTON_EVT_RELEASED | BUTTON_LEFT:
-        io_seproxyhal_touch_auth(NULL);
+        io_seproxyhal_touch_back(NULL);
         break;
 
     case BUTTON_EVT_RELEASED | BUTTON_RIGHT:
@@ -257,12 +189,20 @@ static const bagl_element_t *io_seproxyhal_touch_exit(const bagl_element_t *e) {
     return NULL;
 }
 
-static const bagl_element_t *io_seproxyhal_touch_next(const bagl_element_t *e) {
-    path[4]++;
-    if (!derive()) {
-        path[4]--;
-    }
+static const bagl_element_t *io_seproxyhal_touch_next(const bagl_element_t *e) {   
+    os_memmove(top, aa2, sizeof(aa2));    
+    os_memmove(mid, bb2, sizeof(bb2));  
+    os_memmove(bot, cc2, sizeof(cc2));      
     ui_idle();
+    
+    return NULL;
+}
+
+static const bagl_element_t *io_seproxyhal_touch_back(const bagl_element_t *e) {
+    os_memmove(top, aa1, sizeof(aa1));    
+    os_memmove(mid, bb1, sizeof(bb1));    
+    os_memmove(bot, cc1, sizeof(cc1));          
+    ui_idle();    
     return NULL;
 }
 
@@ -308,7 +248,7 @@ static void ui_idle(void) {
 #ifdef TARGET_BLUE
     UX_DISPLAY(bagl_ui_sample_blue, NULL);
 #else
-    UX_DISPLAY(bagl_ui_sample_nanos, bagl_ui_sample_nanos_prepro);
+    UX_DISPLAY(bagl_ui_sample_nanos, NULL);
 #endif
 }
 
@@ -499,7 +439,7 @@ static bool derive() {
     unsigned char tmp[25];
     unsigned int length;
 
-    if (!os_global_pin_is_validated()) {
+    if (/*!os_global_pin_is_validated()*/ 1) {
         os_memmove(address, NOT_AVAILABLE, sizeof(NOT_AVAILABLE));
         return false;
     }
@@ -540,7 +480,7 @@ __attribute__((section(".boot"))) int main(void) {
             // Invalidate the current authentication to demonstrate
             // reauthentication
             // Reauthenticate with "Auth" (Blue) or left button (Nano S)
-            os_global_pin_invalidate();
+            //os_global_pin_invalidate();
 
 #ifdef LISTEN_BLE
             if (os_seph_features() &
@@ -560,7 +500,12 @@ __attribute__((section(".boot"))) int main(void) {
             path[3] = 0;
             path[4] = 0;
 
-            derive();
+            //derive();
+            os_memmove(address, NOT_AVAILABLE, sizeof(NOT_AVAILABLE));
+            os_memmove(top, NOT_AVAILABLE, sizeof(NOT_AVAILABLE));
+            os_memmove(mid, NOT_AVAILABLE, sizeof(NOT_AVAILABLE));
+            os_memmove(bot, NOT_AVAILABLE, sizeof(NOT_AVAILABLE));
+
             ui_idle();
 
             sample_main();
