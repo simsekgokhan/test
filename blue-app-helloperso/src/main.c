@@ -45,6 +45,7 @@ static const char NOT_AVAILABLE[] = "NOT_AVAILABLE";
 
 static bool game_started;
 static bool game_ower;
+static int game_score;
 
 // Welcome
 static const char welcomeTop[] = "Welcome to ";
@@ -59,17 +60,17 @@ static const char welcomeBot[] = "Game";
 // Lost
 static const char lostTop[] = "Incorrect answer :(";
 static const char lostMid[] = "Your Score:";
-static const char lostBot[] = "55";
+static char lostBot[] = "55";
 
 static const char quest[][30] = {
-    "Antibiotics kill viruses", "as well as", "bacteria.", 
     "We see the Sun", "where it was", "8 mins, 20 secs ago",
     "The capital of", "Australia", "is Sydney",
-    "World's highest waterfall", "is Angel Falls","in Venezuela",
-    "World's deepest lake is", "Lake Baikal", "in Russia"
+    "Antibiotics kill viruses", "as well as", "bacteria.",     
+    "World's deepest lake is", "Lake Baikal", "in Russia",
+    "World's highest waterfall", "is Angel Falls","in Venezuela"
 };
 
-static bool answers[] = { false, true, false, true, true };
+static bool answers[] = { true, false, false, true, true };
 
 // ********************************************************************************
 // Ledger Blue specific UI
@@ -222,17 +223,19 @@ static const bagl_element_t *io_seproxyhal_touch_right(const bagl_element_t *e) 
     }
 
     const int hh = path[4];    
-    if(answers[hh/3 - 1]) {
+    if(answers[hh/3 - 1]) { // correct answer
         os_memmove(top, quest[hh], sizeof(quest[hh]));    
         os_memmove(mid, quest[hh+1], sizeof(quest[hh+1]));  
         os_memmove(bot, quest[hh+2], sizeof(quest[hh+2])); 
-        path[4] += 3;        
+        path[4] += 3;
+        ++game_score;
     }
     else {
         game_ower = true;        
+        const char score[10] = {game_score + 48};
         os_memmove(top, lostTop, sizeof(lostTop));    
         os_memmove(mid, lostMid, sizeof(lostMid));    
-        os_memmove(bot, lostBot, sizeof(lostBot)); 
+        os_memmove(bot, score, sizeof(score)); 
     }
 
     ui_idle();
@@ -255,17 +258,19 @@ static const bagl_element_t *io_seproxyhal_touch_left(const bagl_element_t *e) {
     }
 
     const int hh = path[4];
-    if(!answers[hh/3 - 1]) {
+    if(!answers[hh/3 - 1]) {    // correct answer
         os_memmove(top, quest[hh], sizeof(quest[hh]));    
         os_memmove(mid, quest[hh+1], sizeof(quest[hh+1]));  
         os_memmove(bot, quest[hh+2], sizeof(quest[hh+2])); 
-        path[4] += 3;        
+        path[4] += 3;    
+        ++game_score;            
     }
     else {
         game_ower = true;
+        const char score[10] = {game_score + 48};
         os_memmove(top, lostTop, sizeof(lostTop));    
         os_memmove(mid, lostMid, sizeof(lostMid));    
-        os_memmove(bot, lostBot, sizeof(lostBot));        
+        os_memmove(bot, score, sizeof(score));        
     }
          
     ui_idle();    
@@ -528,6 +533,7 @@ __attribute__((section(".boot"))) int main(void) {
             //derive();
             game_started = false;
             game_ower = false;
+            game_score = 0;
 
             os_memmove(address, NOT_AVAILABLE, sizeof(NOT_AVAILABLE));
             os_memmove(top, welcomeTop, sizeof(welcomeTop));
