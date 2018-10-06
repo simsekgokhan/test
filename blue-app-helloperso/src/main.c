@@ -18,7 +18,6 @@
 #include "os.h"
 #include "cx.h"
 #include <stdbool.h>
-
 #include "os_io_seproxyhal.h"
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
@@ -26,9 +25,8 @@ unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 static const bagl_element_t *io_seproxyhal_touch_exit(const bagl_element_t *e);
 static const bagl_element_t *io_seproxyhal_touch_next(const bagl_element_t *e);
 static const bagl_element_t *io_seproxyhal_touch_back(const bagl_element_t *e);
-static const bagl_element_t *io_seproxyhal_touch_auth(const bagl_element_t *e);
-static bool derive(void);
 static void ui_idle(void);
+//static void setText(const char* top, const char* mid, const char* bot);
 
 static char address[100];
 static char top[100];
@@ -38,15 +36,30 @@ static char bot[100];
 static unsigned int path[5];
 ux_state_t ux;
 
-static const char NOT_AVAILABLE[] = "Not available";
+static const char NOT_AVAILABLE[] = "NOT_AVAILABLE";
 
-static int level = 0;
-static const char aa1[] = "Welcome. You are in aa1.";
-static const char aa2[] = "Welcome. You are in aa2";
-static const char bb1[] = "Welcome. bb1";
-static const char bb2[] = "Welcome. bb2";
-static const char cc1[] = "This is the bottom ccc1-";
-static const char cc2[] = "This is the bottom ccc2-";
+//// Text Examples
+// static const char aa2[] = "Welcome. You are in aa2"; // 23
+// static const char bb1[] = "Welcome. bb1"; // 12
+// static const char cc1[] = "This is the bottom ccc1-";
+
+// Welcome
+static const char welcomeTop[] = "Welcome to ";
+static const char welcomeMid[] = "True/False";
+static const char welcomeBot[] = "Game";
+
+// Score
+// static const char scoreTop[] = "Your Score";
+// static const char scoreMid[] = "";
+// static const char scoreBot[] = "55";
+
+static const char quest[][30] = {
+    "a1", "a2", "a3", 
+    "b1", "b2", "b3",
+    "cc1", "cc2", "cc3",
+    "dd1", "dd2", "dd3",
+    "ee1", "ee2", "ee3"           
+};
 
 // ********************************************************************************
 // Ledger Blue specific UI
@@ -95,7 +108,7 @@ static const bagl_element_t bagl_ui_sample_nanos[] = {
     },
     {
         {BAGL_LABELINE, 0x02, 0, 10, 128, 11, 0, 0, 0, 0xFFFFFF, 0x000000,
-         BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_LEFT, 0},
+         BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
         top,
         0,
         0,
@@ -118,7 +131,7 @@ static const bagl_element_t bagl_ui_sample_nanos[] = {
     },
     {   // type, 	  userid, x,  y, width, height, stroke, radius, fill, fgcolor
         {BAGL_LABELINE, 0x02, 0, 30, 128, 11, 0, 0, 0, 0xFFFFFF, 0x000000,
-         BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_LEFT, 0},
+         BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
         bot,
         0,
         0,
@@ -151,17 +164,6 @@ static const bagl_element_t bagl_ui_sample_nanos[] = {
     },
 };
 
-static const bagl_element_t*
-bagl_ui_sample_nanos_prepro(const bagl_element_t *element) {
-    switch (element->component.userid) {
-    case 2:
-        io_seproxyhal_setup_ticker(
-            MAX(3000, 1000 + bagl_label_roundtrip_duration_ms(element, 7)));
-        break;
-    }
-    return element;
-}
-
 static unsigned int
 bagl_ui_sample_nanos_button(unsigned int button_mask,
                             unsigned int button_mask_counter) {
@@ -190,31 +192,27 @@ static const bagl_element_t *io_seproxyhal_touch_exit(const bagl_element_t *e) {
 }
 
 static const bagl_element_t *io_seproxyhal_touch_next(const bagl_element_t *e) {   
-    os_memmove(top, aa2, sizeof(aa2));    
-    os_memmove(mid, bb2, sizeof(bb2));  
-    os_memmove(bot, cc2, sizeof(cc2));      
+    int hh = path[4];
+    os_memmove(top, quest[hh], sizeof(quest[hh]));    
+    os_memmove(mid, quest[hh+1], sizeof(quest[hh+1]));  
+    os_memmove(bot, quest[hh+2], sizeof(quest[hh+2])); 
+    path[4] += 3;
+
+    // os_memmove(top, quest[qlevel], sizeof(quest[qlevel]));    
+    // os_memmove(mid, quest[qlevel+1], sizeof(quest[qlevel+1]));  
+    // os_memmove(bot, quest[qlevel+2], sizeof(quest[qlevel+2]));      
+    //qlevel += 3;
     ui_idle();
     
     return NULL;
 }
 
 static const bagl_element_t *io_seproxyhal_touch_back(const bagl_element_t *e) {
-    os_memmove(top, aa1, sizeof(aa1));    
-    os_memmove(mid, bb1, sizeof(bb1));    
-    os_memmove(bot, cc1, sizeof(cc1));          
+    // todo: move to score
+    // os_memmove(top, scoreTop, sizeof(scoreTop));    
+    // os_memmove(mid, scoreMid, sizeof(scoreMid));    
+    // os_memmove(bot, scoreBot, sizeof(scoreBot));          
     ui_idle();    
-    return NULL;
-}
-
-static const bagl_element_t *io_seproxyhal_touch_auth(const bagl_element_t *e) {
-    if (!os_global_pin_is_validated()) {
-        bolos_ux_params_t params;
-        os_memset(&params, 0, sizeof(params));
-        params.ux_id = BOLOS_UX_VALIDATE_PIN;
-        os_ux_blocking(&params);
-        derive();
-        ui_idle();
-    }
     return NULL;
 }
 
@@ -251,6 +249,13 @@ static void ui_idle(void) {
     UX_DISPLAY(bagl_ui_sample_nanos, NULL);
 #endif
 }
+
+// todo: sizeoof will not work with char*
+// static void setText(const char* _top, const char* _mid, const char* _bot) {
+//     os_memmove(top, _top, sizeof(_top));    
+//     os_memmove(mid, _mid, sizeof(_mid));    
+//     os_memmove(bot, _bot, sizeof(_bot));
+// }
 
 static void sample_main(void) {
     volatile unsigned int rx = 0;
@@ -428,42 +433,6 @@ static unsigned int encode_base58(const void *in, unsigned int length,
     return length;
 }
 
-static bool derive() {
-    cx_ecfp_private_key_t privateKey;
-    cx_ecfp_public_key_t publicKey;
-    union {
-        cx_sha256_t shasha;
-        cx_ripemd160_t riprip;
-    } u;
-    unsigned char privateKeyData[32];
-    unsigned char tmp[25];
-    unsigned int length;
-
-    if (/*!os_global_pin_is_validated()*/ 1) {
-        os_memmove(address, NOT_AVAILABLE, sizeof(NOT_AVAILABLE));
-        return false;
-    }
-
-    os_perso_derive_node_bip32(CX_CURVE_256K1, path, 5, privateKeyData, NULL);
-
-    cx_ecdsa_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
-    cx_ecfp_generate_pair(CX_CURVE_256K1, &publicKey, &privateKey, 1);
-    publicKey.W[0] = ((publicKey.W[64] & 1) ? 0x03 : 0x02);
-    cx_sha256_init(&u.shasha);
-    cx_hash(&u.shasha.header, CX_LAST, publicKey.W, 33, privateKeyData);
-    cx_ripemd160_init(&u.riprip);
-    cx_hash(&u.riprip.header, CX_LAST, privateKeyData, 32, tmp + 1);
-    tmp[0] = 0;
-    cx_sha256_init(&u.shasha);
-    cx_hash(&u.shasha.header, CX_LAST, tmp, 21, privateKeyData);
-    cx_sha256_init(&u.shasha);
-    cx_hash(&u.shasha.header, CX_LAST, privateKeyData, 32, privateKeyData);
-    os_memmove(tmp + 21, privateKeyData, 4);
-    length = encode_base58(tmp, sizeof(tmp), address, sizeof(address));
-    address[length] = '\0';
-    return true;
-}
-
 __attribute__((section(".boot"))) int main(void) {
     // exit critical section
     __asm volatile("cpsie i");
@@ -502,9 +471,9 @@ __attribute__((section(".boot"))) int main(void) {
 
             //derive();
             os_memmove(address, NOT_AVAILABLE, sizeof(NOT_AVAILABLE));
-            os_memmove(top, NOT_AVAILABLE, sizeof(NOT_AVAILABLE));
-            os_memmove(mid, NOT_AVAILABLE, sizeof(NOT_AVAILABLE));
-            os_memmove(bot, NOT_AVAILABLE, sizeof(NOT_AVAILABLE));
+            os_memmove(top, welcomeTop, sizeof(welcomeTop));
+            os_memmove(mid, welcomeMid, sizeof(welcomeMid));
+            os_memmove(bot, welcomeBot, sizeof(welcomeBot));
 
             ui_idle();
 
