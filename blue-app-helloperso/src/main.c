@@ -17,8 +17,9 @@
 
 #include "os.h"
 #include "cx.h"
-#include <stdbool.h>
 #include "os_io_seproxyhal.h"
+
+#include <stdbool.h>
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
@@ -53,20 +54,13 @@ static const char welcomeTop[] = "Welcome to ";
 static const char welcomeMid[] = "\"True or False\"";
 static const char welcomeBot[] = "Game";
 
-// Score
-// static const char scoreTop[] = "Your Score";
-// static const char scoreMid[] = "";
-// static const char scoreBot[] = "55";
-
 // Lost
 static const char lostTop[] = "Incorrect answer :(";
 static const char lostMid[] = "Your Score:";
-//static char lostBot[] = "55";   // todo: delete
 
 // won
 static const char wonTop[] = "Congrats. You won :)";
 static const char wonMid[] = "Your Score:";
-//static char wonBot[] = "55";    // todo: delete
 
 static const char quest[][30] = {
     "We see the Sun", "where it was", "8 mins, 20 secs ago",
@@ -77,6 +71,7 @@ static const char quest[][30] = {
 };
 
 static bool answers[] = { true, false, false, true, true };
+static int random_array[5];
 
 // ********************************************************************************
 // Ledger Blue specific UI
@@ -230,18 +225,20 @@ static const bagl_element_t *io_seproxyhal_touch_right(const bagl_element_t *e) 
 
     if(!game_started){
         game_started = true;
-        os_memmove(top, quest[0], sizeof(quest[0]));    
-        os_memmove(mid, quest[1], sizeof(quest[1]));  
-        os_memmove(bot, quest[2], sizeof(quest[2])); 
+        const int index = random_array[0]*3;
+        os_memmove(top, quest[index], sizeof(quest[index]));    
+        os_memmove(mid, quest[index+1], sizeof(quest[index+1]));  
+        os_memmove(bot, quest[index+2], sizeof(quest[index+2])); 
         path[4] += 3;        
         return NULL;
     }
 
-    const int hh = path[4];    
-    if(answers[hh/3 - 1]) { // correct answer
-        os_memmove(top, quest[hh], sizeof(quest[hh]));    
-        os_memmove(mid, quest[hh+1], sizeof(quest[hh+1]));  
-        os_memmove(bot, quest[hh+2], sizeof(quest[hh+2])); 
+    const int level = path[4]/3;    
+    const int index = random_array[level]*3;
+    if(answers[random_array[level-1]]) { // correct answer
+        os_memmove(top, quest[index], sizeof(quest[index]));    
+        os_memmove(mid, quest[index+1], sizeof(quest[index+1]));  
+        os_memmove(bot, quest[index+2], sizeof(quest[index+2])); 
         path[4] += 3;
         ++game_score;
     }
@@ -273,21 +270,23 @@ static const bagl_element_t *io_seproxyhal_touch_left(const bagl_element_t *e) {
     }
 
     if(!game_started){
-        game_started = 1;
-        os_memmove(top, quest[0], sizeof(quest[0]));    
-        os_memmove(mid, quest[1], sizeof(quest[1]));  
-        os_memmove(bot, quest[2], sizeof(quest[2])); 
+        game_started = true;
+        const int index = random_array[0]*3;
+        os_memmove(top, quest[index], sizeof(quest[index]));    
+        os_memmove(mid, quest[index+1], sizeof(quest[index+1]));  
+        os_memmove(bot, quest[index+2], sizeof(quest[index+2])); 
         path[4] += 3;        
         return NULL;
     }
 
-    const int hh = path[4];
-    if(!answers[hh/3 - 1]) {    // correct answer
-        os_memmove(top, quest[hh], sizeof(quest[hh]));    
-        os_memmove(mid, quest[hh+1], sizeof(quest[hh+1]));  
-        os_memmove(bot, quest[hh+2], sizeof(quest[hh+2])); 
-        path[4] += 3;    
-        ++game_score;            
+    const int level = path[4]/3;    
+    const int index = random_array[level]*3;
+    if(!answers[random_array[level-1]]) { // correct answer
+        os_memmove(top, quest[index], sizeof(quest[index]));    
+        os_memmove(mid, quest[index+1], sizeof(quest[index+1]));  
+        os_memmove(bot, quest[index+2], sizeof(quest[index+2])); 
+        path[4] += 3;
+        ++game_score;
     }
     else {
         game_lost = true;
@@ -554,7 +553,26 @@ __attribute__((section(".boot"))) int main(void) {
             path[3] = 0;
             path[4] = 0;
 
-            //derive();
+            // Init random numbers array
+            random_array[0] = -1;
+            random_array[1] = -1;
+            random_array[2] = -1;
+            random_array[3] = -1;
+            random_array[4] = -1;
+            const int qsize = sizeof(answers);
+            for (int i = 0; i < qsize; i++) {
+                while (-1 == random_array[i]) {
+                    const int ran = (int)cx_rng_u8() % qsize;
+                    bool unique = true;
+                    for (int k = 0; k < qsize; k++) {
+                        if (ran == random_array[k])
+                            unique = false;
+                    }
+                    if (unique)
+                        random_array[i] = ran;
+                };
+            }
+
             game_started = false;
             game_lost = false;
             game_won = false;
@@ -566,7 +584,6 @@ __attribute__((section(".boot"))) int main(void) {
             os_memmove(bot, welcomeBot, sizeof(welcomeBot));
 
             ui_idle();
-
             sample_main();
         }
         CATCH_OTHER(e) {
