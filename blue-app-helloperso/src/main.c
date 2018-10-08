@@ -39,11 +39,6 @@ ux_state_t ux;
 
 static const char NOT_AVAILABLE[] = "NOT_AVAILABLE";
 
-//// Text Examples
-// static const char aa2[] = "Welcome. You are in aa2"; // 23
-// static const char bb1[] = "Welcome. bb1"; // 12
-// static const char cc1[] = "This is the bottom ccc1-";
-
 static bool game_started;
 static bool game_lost;
 static bool game_won;
@@ -58,20 +53,26 @@ static const char welcomeBot[] = "Game";
 static const char lostTop[] = "Incorrect answer :(";
 static const char lostMid[] = "Your Score:";
 
-// won
+// Won
 static const char wonTop[] = "Congrats. You won :)";
 static const char wonMid[] = "Your Score:";
 
 static const char quest[][30] = {
     "We see the Sun", "where it was", "8 mins, 20 secs ago",
-    "The capital of", "Australia", "is Sydney",
+    "The capital of", "Australia", "is Sydney", // ans: Canberra
     "Antibiotics kill", "viruses", "as well as bacteria.",     
     "Belarus is the", "silicon valley", "of Eastern Europe",
-    "World's highest waterfall", "is Angel Falls","in Venezuela"
+    "World's highest waterfall", "is Angel Falls","in Venezuela",
+    "The sunset", "on Mars", "appears purple",  // ans: blue
+    "The Great Wall", "of China", "can be seen from space",     
+    "The Earth's atmosphere", "makes the", "sun appear yellow",
+    "A nuclear weapon", "could", "destroy an asteroid",
+    "An avarage size", "coffee's effect", "lasts about 4-6 hours",
 };
 
-static bool answers[] = { true, false, false, true, true };
+static bool answers[] = { true, false, false, true, true, false, false, true, false, true };
 static int random_array[5];
+static const int MAX_QUES_CNT = 5;
 
 // ********************************************************************************
 // Ledger Blue specific UI
@@ -214,7 +215,7 @@ static const bagl_element_t *io_seproxyhal_touch_right(const bagl_element_t *e) 
         return NULL;
     }    
 
-    if(sizeof(answers) == path[4]/3) {
+    if(MAX_QUES_CNT == path[4]/3) {
         game_won = true;
         const char score[10] = {game_score + 1 + 48};        
         os_memmove(top, wonTop, sizeof(wonTop));    
@@ -260,7 +261,7 @@ static const bagl_element_t *io_seproxyhal_touch_left(const bagl_element_t *e) {
         return NULL;
     }    
 
-    if(sizeof(answers) == path[4]/3) {
+    if(MAX_QUES_CNT == path[4]/3) {
         game_won = true;
         const char score[10] = {game_score + 1 + 48};        
         os_memmove(top, wonTop, sizeof(wonTop));    
@@ -560,11 +561,11 @@ __attribute__((section(".boot"))) int main(void) {
             random_array[3] = -1;
             random_array[4] = -1;
             const int qsize = sizeof(answers);
-            for (int i = 0; i < qsize; i++) {
+            for (int i = 0; i < MAX_QUES_CNT; i++) {
                 while (-1 == random_array[i]) {
                     const int ran = (int)cx_rng_u8() % qsize;
                     bool unique = true;
-                    for (int k = 0; k < qsize; k++) {
+                    for (int k = 0; k < MAX_QUES_CNT; k++) {
                         if (ran == random_array[k])
                             unique = false;
                     }
