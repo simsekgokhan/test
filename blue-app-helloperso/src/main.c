@@ -44,7 +44,8 @@ static const char NOT_AVAILABLE[] = "NOT_AVAILABLE";
 // static const char cc1[] = "This is the bottom ccc1-";
 
 static bool game_started;
-static bool game_ower;
+static bool game_lost;
+static bool game_won;
 static int game_score;
 
 // Welcome
@@ -60,13 +61,18 @@ static const char welcomeBot[] = "Game";
 // Lost
 static const char lostTop[] = "Incorrect answer :(";
 static const char lostMid[] = "Your Score:";
-static char lostBot[] = "55";
+//static char lostBot[] = "55";   // todo: delete
+
+// won
+static const char wonTop[] = "Congrats. You won :)";
+static const char wonMid[] = "Your Score:";
+//static char wonBot[] = "55";    // todo: delete
 
 static const char quest[][30] = {
     "We see the Sun", "where it was", "8 mins, 20 secs ago",
     "The capital of", "Australia", "is Sydney",
-    "Antibiotics kill viruses", "as well as", "bacteria.",     
-    "World's deepest lake is", "Lake Baikal", "in Russia",
+    "Antibiotics kill", "viruses", "as well as bacteria.",     
+    "Belarus is the", "silicon valley", "of Eastern Europe",
     "World's highest waterfall", "is Angel Falls","in Venezuela"
 };
 
@@ -208,8 +214,17 @@ static const bagl_element_t *io_seproxyhal_touch_exit(const bagl_element_t *e) {
 }
 
 static const bagl_element_t *io_seproxyhal_touch_right(const bagl_element_t *e) {   
-    if(game_ower) {
+    if(game_lost || game_won) {
         os_sched_exit(0);        
+        return NULL;
+    }    
+
+    if(sizeof(answers) == path[4]/3) {
+        game_won = true;
+        const char score[10] = {game_score + 1 + 48};        
+        os_memmove(top, wonTop, sizeof(wonTop));    
+        os_memmove(mid, wonMid, sizeof(wonMid));  
+        os_memmove(bot, score, sizeof(score));                 
         return NULL;
     }
 
@@ -231,7 +246,7 @@ static const bagl_element_t *io_seproxyhal_touch_right(const bagl_element_t *e) 
         ++game_score;
     }
     else {
-        game_ower = true;        
+        game_lost = true;        
         const char score[10] = {game_score + 48};
         os_memmove(top, lostTop, sizeof(lostTop));    
         os_memmove(mid, lostMid, sizeof(lostMid));    
@@ -243,8 +258,17 @@ static const bagl_element_t *io_seproxyhal_touch_right(const bagl_element_t *e) 
 }
 
 static const bagl_element_t *io_seproxyhal_touch_left(const bagl_element_t *e) {
-    if(game_ower) {
+    if(game_lost || game_won) {
         os_sched_exit(0);        
+        return NULL;
+    }    
+
+    if(sizeof(answers) == path[4]/3) {
+        game_won = true;
+        const char score[10] = {game_score + 1 + 48};        
+        os_memmove(top, wonTop, sizeof(wonTop));    
+        os_memmove(mid, wonMid, sizeof(wonMid));  
+        os_memmove(bot, score, sizeof(score));                 
         return NULL;
     }
 
@@ -266,7 +290,7 @@ static const bagl_element_t *io_seproxyhal_touch_left(const bagl_element_t *e) {
         ++game_score;            
     }
     else {
-        game_ower = true;
+        game_lost = true;
         const char score[10] = {game_score + 48};
         os_memmove(top, lostTop, sizeof(lostTop));    
         os_memmove(mid, lostMid, sizeof(lostMid));    
@@ -532,7 +556,8 @@ __attribute__((section(".boot"))) int main(void) {
 
             //derive();
             game_started = false;
-            game_ower = false;
+            game_lost = false;
+            game_won = false;
             game_score = 0;
 
             os_memmove(address, NOT_AVAILABLE, sizeof(NOT_AVAILABLE));
