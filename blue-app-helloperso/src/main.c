@@ -215,14 +215,24 @@ static const bagl_element_t *io_seproxyhal_touch_right(const bagl_element_t *e) 
         return NULL;
     }    
 
-    if(MAX_QUES_CNT == path[4]/3) {
-        game_won = true;
-        const char score[10] = {game_score + 1 + 48};        
-        os_memmove(top, wonTop, sizeof(wonTop));    
-        os_memmove(mid, wonMid, sizeof(wonMid));  
-        os_memmove(bot, score, sizeof(score));                 
+    const int level = path[4]/3;    
+    if(MAX_QUES_CNT == level) {
+        if(answers[random_array[level-1]]) {
+            game_won = true;
+            const char score[10] = {game_score + 1 + 48};        
+            os_memmove(top, wonTop, sizeof(wonTop));    
+            os_memmove(mid, wonMid, sizeof(wonMid));  
+            os_memmove(bot, score, sizeof(score));                 
+        }
+        else {
+            game_lost = true;        
+            const char score[10] = {game_score + 48};
+            os_memmove(top, lostTop, sizeof(lostTop));    
+            os_memmove(mid, lostMid, sizeof(lostMid));    
+            os_memmove(bot, score, sizeof(score)); 
+        }
         return NULL;
-    }
+    } 
 
     if(!game_started){
         game_started = true;
@@ -234,7 +244,6 @@ static const bagl_element_t *io_seproxyhal_touch_right(const bagl_element_t *e) 
         return NULL;
     }
 
-    const int level = path[4]/3;    
     const int index = random_array[level]*3;
     if(answers[random_array[level-1]]) { // correct answer
         os_memmove(top, quest[index], sizeof(quest[index]));    
@@ -261,14 +270,24 @@ static const bagl_element_t *io_seproxyhal_touch_left(const bagl_element_t *e) {
         return NULL;
     }    
 
-    if(MAX_QUES_CNT == path[4]/3) {
-        game_won = true;
-        const char score[10] = {game_score + 1 + 48};        
-        os_memmove(top, wonTop, sizeof(wonTop));    
-        os_memmove(mid, wonMid, sizeof(wonMid));  
-        os_memmove(bot, score, sizeof(score));                 
+    const int level = path[4]/3;    
+    if(MAX_QUES_CNT == level) {
+        if(!answers[random_array[level-1]]) {
+            game_won = true;
+            const char score[10] = {game_score + 1 + 48};        
+            os_memmove(top, wonTop, sizeof(wonTop));    
+            os_memmove(mid, wonMid, sizeof(wonMid));  
+            os_memmove(bot, score, sizeof(score));                 
+        }
+        else {
+            game_lost = true;        
+            const char score[10] = {game_score + 48};
+            os_memmove(top, lostTop, sizeof(lostTop));    
+            os_memmove(mid, lostMid, sizeof(lostMid));    
+            os_memmove(bot, score, sizeof(score)); 
+        }
         return NULL;
-    }
+    } 
 
     if(!game_started){
         game_started = true;
@@ -280,7 +299,6 @@ static const bagl_element_t *io_seproxyhal_touch_left(const bagl_element_t *e) {
         return NULL;
     }
 
-    const int level = path[4]/3;    
     const int index = random_array[level]*3;
     if(!answers[random_array[level-1]]) { // correct answer
         os_memmove(top, quest[index], sizeof(quest[index]));    
